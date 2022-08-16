@@ -88,6 +88,7 @@ module.exports = {
     'react/no-unused-prop-types': 'off',
     'default-param-last': 'off',
     'react/destructuring-assignment': 'off',
+    'class-methods-use-this': 'off',
   },
   ignorePatterns: ['package.json', './node_modules', './dist', '**/dist/*.js'],
 };
