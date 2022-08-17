@@ -23,6 +23,9 @@ import {createRejectionWithAlert} from '@redux/thunks/utils';
 import {getFileStats} from '@utils/files';
 import {OPEN_EXISTING_PROJECT, trackEvent} from '@utils/telemetry';
 
+import {fileService} from '@src/infrastructure/controllers/FileController';
+import {IFolder} from '@src/monokle-core/core/interfaces/IFolder';
+
 /**
  * Thunk to set the specified root folder
  */
@@ -62,7 +65,13 @@ export const setRootFolder = createAsyncThunk<
   if (!stats.isDirectory()) {
     return createRejectionWithAlert(thunkAPI, 'Invalid path', `Specified path ${rootFolder} is not a folder`);
   }
+  const mineStart = Date.now();
+
+  const mainFolder: IFolder = await fileService.getFolder(rootFolder);
+  console.log(await fileService.getAllResources(mainFolder));
+  console.log('mine', Date.now() - mineStart);
   const rootEntry = createRootFileEntry(rootFolder, fileMap);
+  const otherStart = Date.now();
 
   // this Promise is needed for `setRootFolder.pending` action to be dispatched correctly
   const readFilesPromise = new Promise<string[]>(resolve => {
@@ -96,6 +105,7 @@ export const setRootFolder = createAsyncThunk<
     numberOfFiles: Object.values(fileMap).filter(f => !f.children).length,
     numberOfResources: Object.values(resourceMap).length,
   });
+  console.log('other', Date.now() - otherStart);
 
   return {
     projectConfig,

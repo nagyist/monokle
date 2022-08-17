@@ -1,5 +1,7 @@
-import {getFileService} from '@root/monokle-core';
+import {getFileService} from '@src/monokle-core';
 
-import {LocalFileRepository} from '../repositories/FileRepository';
+import {LocalFileRepository} from '../repositories/LocalFileRepository';
 
-const fileService = getFileService(new LocalFileRepository('/Users/erdkse/Monokle/main-cluster'));
+const fileService = getFileService(new LocalFileRepository());
+
+export {fileService};

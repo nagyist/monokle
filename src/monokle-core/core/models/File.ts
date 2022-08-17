@@ -3,29 +3,32 @@ import {parse} from 'path';
 import {LineCounter, parseAllDocuments} from 'yaml';
 
 import {k8sResourceFactory} from '../factories/K8sResourceFactory';
+import {IBaseResource} from '../interfaces/IBaseResource';
 import {IFile} from '../interfaces/IFile';
-import {IK8sResource} from '../interfaces/IK8sResource';
-import {K8sResource} from './K8sResource';
 
 export class File implements IFile {
   path: string;
   content: string;
   extension: string;
+  isHelmTemplate: boolean;
+  isHelmValues: boolean;
 
   constructor(path: string, content: string, extension: string) {
     this.path = path;
-    this.content = content;
     this.extension = extension;
+    this.content = content;
+    this.isHelmTemplate = false; // To be implemented later
+    this.isHelmValues = false; // To be implemented later
   }
 
-  getK8sResorces(): K8sResource[] {
+  getResources(): IBaseResource[] {
     const lineCounter: LineCounter = new LineCounter();
     const documents: any = parseAllDocuments(this.content, {
       lineCounter,
       uniqueKeys: false,
       strict: false,
     });
-    const result: IK8sResource[] = [];
+    const result: IBaseResource[] = [];
     let splitDocs: any;
 
     if (!documents && documents.length <= 0) {

@@ -17,6 +17,6 @@
     "baseUrl": "./",
     "outDir": "./build"
   },
-  "include": ["src", "monokle-core"],
+  "include": ["src"],
   "extends": "./paths.json"
 }
