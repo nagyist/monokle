@@ -13,7 +13,7 @@ import {RootState} from '@models/rootstate';
 
 import {SetRootFolderPayload} from '@redux/reducers/main';
 import {currentConfigSelector} from '@redux/selectors';
-import {createRootFileEntry, readFiles} from '@redux/services/fileEntry';
+// import {createRootFileEntry, readFiles} from '@redux/services/fileEntry';
 import {monitorRootFolder} from '@redux/services/fileMonitor';
 import {processKustomizations} from '@redux/services/kustomize';
 import {getK8sVersion} from '@redux/services/projectConfig';
@@ -24,6 +24,8 @@ import {getFileStats} from '@utils/files';
 import {OPEN_EXISTING_PROJECT, trackEvent} from '@utils/telemetry';
 
 import {fileService} from '@src/infrastructure/controllers/FileController';
+import {IFile} from '@src/monokle-core';
+import {IBaseResource} from '@src/monokle-core/core/interfaces/IBaseResource';
 import {IFolder} from '@src/monokle-core/core/interfaces/IFolder';
 
 /**
@@ -65,25 +67,27 @@ export const setRootFolder = createAsyncThunk<
   if (!stats.isDirectory()) {
     return createRejectionWithAlert(thunkAPI, 'Invalid path', `Specified path ${rootFolder} is not a folder`);
   }
-  const mineStart = Date.now();
 
   const mainFolder: IFolder = await fileService.getFolder(rootFolder);
-  console.log(await fileService.getAllResources(mainFolder));
-  console.log('mine', Date.now() - mineStart);
-  const rootEntry = createRootFileEntry(rootFolder, fileMap);
-  const otherStart = Date.now();
+  const allFiles: IFile[] = await fileService.getAllFiles(mainFolder);
+  const allResources: IBaseResource[] = await fileService.getAllResources(mainFolder);
+  // const rootEntry = createRootFileEntry(rootFolder, fileMap);
 
   // this Promise is needed for `setRootFolder.pending` action to be dispatched correctly
-  const readFilesPromise = new Promise<string[]>(resolve => {
-    setImmediate(() => {
-      resolve(
-        readFiles(rootFolder, projectConfig, resourceMap, fileMap, helmChartMap, helmValuesMap, helmTemplatesMap)
-      );
-    });
-  });
-  const files = await readFilesPromise;
+  // const readFilesPromise = new Promise<string[]>(resolve => {
+  //   setImmediate(() => {
+  //     resolve(
+  //       readFiles(rootFolder, projectConfig, resourceMap, fileMap, helmChartMap, helmValuesMap, helmTemplatesMap)
+  //     );
+  //   });
+  // });
+  // const files = await readFilesPromise;
 
-  rootEntry.children = files;
+  // rootEntry.children = files;
+
+  allResources.forEach((r: IBaseResource) => {
+    resourceMap[r.id] = r as any;
+  });
 
   const policyPlugins = thunkAPI.getState().main.policies.plugins;
   processKustomizations(resourceMap, fileMap);
@@ -105,7 +109,6 @@ export const setRootFolder = createAsyncThunk<
     numberOfFiles: Object.values(fileMap).filter(f => !f.children).length,
     numberOfResources: Object.values(resourceMap).length,
   });
-  console.log('other', Date.now() - otherStart);
 
   return {
     projectConfig,

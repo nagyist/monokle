@@ -1,3 +1,5 @@
+import {HELM_CHART_ENTRY_FILE} from '@constants/constants';
+
 import {IFile} from '../interfaces/IFile';
 import {IFolder} from '../interfaces/IFolder';
 
@@ -11,12 +13,13 @@ export class Folder implements IFolder {
     this.path = path;
     this.folders = folders;
     this.files = files;
-    this.containsHelmChart = false; // To be implemented later
+    this.containsHelmChart = this.files.map((file: IFile) => file.path).indexOf(HELM_CHART_ENTRY_FILE) !== -1;
   }
   addFolder(folder: IFolder): void {
     this.folders = [...this.folders, folder];
   }
   addFile(file: IFile): void {
     this.files = [...this.files, file];
+    this.containsHelmChart = this.files.map((f: IFile) => f.path).indexOf(HELM_CHART_ENTRY_FILE) !== -1;
   }
 }
