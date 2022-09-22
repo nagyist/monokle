@@ -1,5 +1,8 @@
 export type IconNames =
   | 'images'
+  | 'git'
+  | 'git-ops'
+  | 'git-project'
   | 'kubernetes'
   | 'collapse'
   | 'opa-status'
@@ -19,4 +22,5 @@ export type IconNames =
   | 'resource-links'
   | 'k8s-schema'
   | 'search'
-  | 'terminal';
+  | 'terminal'
+  | 'split-view';

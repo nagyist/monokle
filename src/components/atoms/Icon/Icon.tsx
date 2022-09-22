@@ -8,6 +8,9 @@ import Colors from '@styles/Colors';
 
 import {
   Collapse,
+  Git,
+  GitOps,
+  GitProject,
   Helm,
   Images,
   IncomingRefs,
@@ -23,6 +26,7 @@ import {
   SeverityLow,
   SeverityMedium,
   Shortcuts,
+  SplitView,
   Terminal,
   Validation,
   Warning,
@@ -41,6 +45,9 @@ type IconProps = {
 const icons: Record<IconNames, React.ComponentType<any>> = {
   'opa-status': OPAStatus,
   images: Images,
+  git: Git,
+  'git-ops': GitOps,
+  'git-project': GitProject,
   kubernetes: Kubernetes,
   collapse: Collapse,
   helm: Helm,
@@ -60,6 +67,7 @@ const icons: Record<IconNames, React.ComponentType<any>> = {
   'k8s-schema': K8sSchema,
   search: Search,
   terminal: Terminal,
+  'split-view': SplitView,
 };
 
 const Icon: React.FC<IconProps> = props => {

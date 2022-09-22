@@ -11,6 +11,7 @@ import {BookOutlined} from '@ant-design/icons';
 import {HELM_CHART_HELP_URL, KUSTOMIZE_HELP_URL, TOOLTIP_DELAY} from '@constants/constants';
 import {makeApplyKustomizationText, makeApplyResourceText} from '@constants/makeApplyText';
 import {
+  EditWithFormTooltip,
   OpenExternalDocumentationTooltip,
   OpenHelmChartDocumentationTooltip,
   OpenKustomizeDocumentationTooltip,
@@ -20,6 +21,7 @@ import {AlertEnum, AlertType} from '@models/alert';
 import {HelmChart, HelmValuesFile} from '@models/helm';
 import {K8sResource} from '@models/k8sresource';
 
+import {toggleForm} from '@redux/forms/slice';
 import {useAppDispatch, useAppSelector} from '@redux/hooks';
 import {setAlert} from '@redux/reducers/alert';
 import {openResourceDiffModal} from '@redux/reducers/main';
@@ -49,7 +51,7 @@ import {
   Walkthrough,
 } from '@molecules';
 
-import {TabHeader} from '@atoms';
+import {Icon, TabHeader} from '@atoms';
 
 import {openExternalResourceKindDocumentation} from '@utils/shell';
 
@@ -119,9 +121,37 @@ const ActionsPane: React.FC<Props> = ({height}) => {
     }
   }, [isButtonShrinked, tabsList]);
 
-  const isKustomization = isKustomizationResource(selectedResource);
-  const resourceKindHandler =
-    selectedResource && !isKustomization ? getResourceKindHandler(selectedResource.kind) : undefined;
+  const isKustomization = useMemo(() => isKustomizationResource(selectedResource), [selectedResource]);
+  const resourceKindHandler = useMemo(
+    () => (selectedResource && !isKustomization ? getResourceKindHandler(selectedResource.kind) : undefined),
+    [isKustomization, selectedResource]
+  );
+
+  const confirmModalTitle = useMemo(() => {
+    if (!selectedResource) {
+      return '';
+    }
+
+    return isKustomizationResource(selectedResource)
+      ? makeApplyKustomizationText(selectedResource.name, kubeConfigContext, kubeConfigContextColor)
+      : makeApplyResourceText(selectedResource.name, kubeConfigContext, kubeConfigContextColor);
+  }, [selectedResource, kubeConfigContext, kubeConfigContextColor]);
+
+  const helmChartConfirmModalTitle = useMemo(() => {
+    if (!selectedValuesFileId) {
+      return '';
+    }
+    const helmValuesFile: HelmValuesFile | undefined = helmValuesMap[selectedValuesFileId];
+
+    if (!helmValuesFile) {
+      return '';
+    }
+    const helmChart: HelmChart | undefined = helmChartMap[helmValuesFile.helmChartId];
+    if (!helmChart) {
+      return '';
+    }
+    return `Install the ${helmChart.name} Chart using ${helmValuesFile.name} in cluster [${kubeConfigContext}]?`;
+  }, [helmChartMap, helmValuesMap, kubeConfigContext, selectedValuesFileId]);
 
   const applySelection = useCallback(() => {
     if (selectedValuesFileId && (!selectedResourceId || selectedValuesFileId === selectedResourceId)) {
@@ -145,14 +175,6 @@ const ActionsPane: React.FC<Props> = ({height}) => {
     kubeConfigContext,
     selectedResourceId,
   ]);
-
-  useEffect(() => {
-    if (monacoEditor.apply) {
-      applySelection();
-      dispatch(setMonacoEditor({apply: false}));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [monacoEditor]);
 
   const diffSelectedResource = useCallback(() => {
     if (!kubeConfigContext || kubeConfigContext === '') {
@@ -218,31 +240,13 @@ const ActionsPane: React.FC<Props> = ({height}) => {
     [dispatch, fileMap, helmChartMap, helmValuesMap, kubeConfigPath, kubeConfigContext, selectedValuesFileId]
   );
 
-  const confirmModalTitle = useMemo(() => {
-    if (!selectedResource) {
-      return '';
+  useEffect(() => {
+    if (monacoEditor.apply) {
+      applySelection();
+      dispatch(setMonacoEditor({apply: false}));
     }
-
-    return isKustomizationResource(selectedResource)
-      ? makeApplyKustomizationText(selectedResource.name, kubeConfigContext, kubeConfigContextColor)
-      : makeApplyResourceText(selectedResource.name, kubeConfigContext, kubeConfigContextColor);
-  }, [selectedResource, kubeConfigContext, kubeConfigContextColor]);
-
-  const helmChartConfirmModalTitle = useMemo(() => {
-    if (!selectedValuesFileId) {
-      return '';
-    }
-    const helmValuesFile: HelmValuesFile | undefined = helmValuesMap[selectedValuesFileId];
-
-    if (!helmValuesFile) {
-      return '';
-    }
-    const helmChart: HelmChart | undefined = helmChartMap[helmValuesFile.helmChartId];
-    if (!helmChart) {
-      return '';
-    }
-    return `Install the ${helmChart.name} Chart using ${helmValuesFile.name} in cluster [${kubeConfigContext}]?`;
-  }, [helmChartMap, helmValuesMap, kubeConfigContext, selectedValuesFileId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monacoEditor]);
 
   // called from main thread because thunks cannot be dispatched by main
   useEffect(() => {
@@ -295,6 +299,7 @@ const ActionsPane: React.FC<Props> = ({height}) => {
   return (
     <S.ActionsPaneMainContainer ref={actionsPaneRef} id="EditorPane">
       <ActionsPaneHeader
+        actionsPaneWidth={actionsPaneWidth}
         selectedResource={selectedResource}
         applySelection={applySelection}
         diffSelectedResource={diffSelectedResource}
@@ -313,15 +318,22 @@ const ActionsPane: React.FC<Props> = ({height}) => {
               onChange={k => setActiveTabKey(k)}
               tabBarExtraContent={
                 selectedResource && resourceKindHandler?.helpLink ? (
-                  <Tooltip mouseEnterDelay={TOOLTIP_DELAY} title={OpenExternalDocumentationTooltip}>
-                    <S.ExtraRightButton
-                      onClick={() => openExternalResourceKindDocumentation(resourceKindHandler?.helpLink)}
-                      type="link"
-                      ref={extraButton}
-                    >
-                      {isButtonShrinked ? '' : `See ${selectedResource?.kind} documentation`} <BookOutlined />
-                    </S.ExtraRightButton>
-                  </Tooltip>
+                  <>
+                    <Tooltip mouseEnterDelay={TOOLTIP_DELAY} title={EditWithFormTooltip}>
+                      <S.ExtraRightButton type="link" onClick={() => dispatch(toggleForm(true))} ref={extraButton}>
+                        <Icon name="split-view" />
+                      </S.ExtraRightButton>
+                    </Tooltip>
+                    <Tooltip mouseEnterDelay={TOOLTIP_DELAY} title={OpenExternalDocumentationTooltip}>
+                      <S.ExtraRightButton
+                        onClick={() => openExternalResourceKindDocumentation(resourceKindHandler?.helpLink)}
+                        type="link"
+                        ref={extraButton}
+                      >
+                        <BookOutlined />
+                      </S.ExtraRightButton>
+                    </Tooltip>
+                  </>
                 ) : isKustomization ? (
                   <Tooltip mouseEnterDelay={TOOLTIP_DELAY} title={OpenKustomizeDocumentationTooltip}>
                     <S.ExtraRightButton

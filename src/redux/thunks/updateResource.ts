@@ -6,19 +6,24 @@ import {AppState} from '@models/appstate';
 import {RootState} from '@models/rootstate';
 import {ThunkApi} from '@models/thunk';
 
+import {setChangedFiles} from '@redux/git';
 import {getActiveResourceMap, getLocalResourceMap, performResourceContentUpdate} from '@redux/reducers/main';
 import {currentConfigSelector} from '@redux/selectors';
 import {isKustomizationPatch, isKustomizationResource, processKustomizations} from '@redux/services/kustomize';
+import {getLineChanged} from '@redux/services/manifest-utils';
 import {getK8sVersion} from '@redux/services/projectConfig';
 import {reprocessResources} from '@redux/services/resource';
 import {findResourcesToReprocess} from '@redux/services/resourceRefs';
 import {updateSelectionAndHighlights} from '@redux/services/selection';
+
+import {promiseFromIpcRenderer} from '@utils/promises';
 
 type UpdateResourcePayload = {
   resourceId: string;
   text: string;
   preventSelectionAndHighlightsUpdate?: boolean;
   isInClusterMode?: boolean;
+  isUpdateFromForm?: boolean;
 };
 
 export const updateResource = createAsyncThunk<AppState, UpdateResourcePayload, ThunkApi>(
@@ -29,8 +34,9 @@ export const updateResource = createAsyncThunk<AppState, UpdateResourcePayload, 
     const schemaVersion = getK8sVersion(projectConfig);
     const userDataDir = String(state.config.userDataDir);
     const policyPlugins = state.main.policies.plugins;
+    const projectRootFolderPath = state.config.selectedProjectRootFolder;
 
-    const {isInClusterMode, resourceId, text, preventSelectionAndHighlightsUpdate} = payload;
+    const {isInClusterMode, resourceId, text, preventSelectionAndHighlightsUpdate, isUpdateFromForm} = payload;
 
     let error: any;
 
@@ -42,6 +48,13 @@ export const updateResource = createAsyncThunk<AppState, UpdateResourcePayload, 
 
         const fileMap = mainState.fileMap;
         if (resource) {
+          const prevContent = resource.text;
+          const newContent = text;
+          if (isUpdateFromForm) {
+            const lineChanged = getLineChanged(prevContent, newContent);
+            mainState.lastChangedLine = lineChanged;
+          }
+
           performResourceContentUpdate(resource, text, fileMap, resourceMap);
           let resourceIds = findResourcesToReprocess(resource, currentResourceMap);
           reprocessResources(
@@ -86,6 +99,13 @@ export const updateResource = createAsyncThunk<AppState, UpdateResourcePayload, 
     if (error) {
       return {...state.main, autosaving: {status: false, error}};
     }
+
+    promiseFromIpcRenderer('git.getChangedFiles', 'git.getChangedFiles.result', {
+      localPath: projectRootFolderPath,
+      fileMap: nextMainState.fileMap,
+    }).then(result => {
+      thunkAPI.dispatch(setChangedFiles(result));
+    });
 
     return nextMainState;
   }

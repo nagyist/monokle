@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.10.3](https://github.com/kubeshop/monokle/compare/v1.10.3-nightly-2022-08-26.0...v1.10.3) (2022-08-26)
+
+
+### Features
+
+* start project by cloning git repo ([b28f1c1](https://github.com/kubeshop/monokle/commit/b28f1c11d2ef5586f6e529f4ad9aefeb3cf04cfc))
+
+
+### Bug Fixes
+
+* downgrade electron version ([50ff222](https://github.com/kubeshop/monokle/commit/50ff222330cb360e7f7356deb85695cfff3647b2))
+
+### [1.10.2](https://github.com/kubeshop/monokle/compare/v1.10.2-nightly-2022-08-24.0...v1.10.2) (2022-08-24)
+
+
+### Bug Fixes
+
+* auto-updater issue ([096e49e](https://github.com/kubeshop/monokle/commit/096e49ec94726382801b4b3ed87e062540175731))
+* improved handling of invalid Chart.yaml ([4cc41e6](https://github.com/kubeshop/monokle/commit/4cc41e68f16f7cb92e0ce7b6d579c1bc79a7c231))
+* preview configuration details crashing ([8d9c60a](https://github.com/kubeshop/monokle/commit/8d9c60a5885cf33c19af7bbabd4cf0fd775f04cf))
+* select file on match line click ([e5ab3ad](https://github.com/kubeshop/monokle/commit/e5ab3ada17f96a7505aff9701e1de701b8e644d5))
+* upgrade type-fest from 2.17.0 to 2.18.0 ([372514d](https://github.com/kubeshop/monokle/commit/372514ded0fb5ec425dcbf0082baa045088a043d))
+
+### [1.10.1](https://github.com/kubeshop/monokle/compare/v1.10.1-nightly-2022-08-19.0...v1.10.1) (2022-08-19)
+
+
+### Bug Fixes
+
+* upgrade antd from 4.22.1 to 4.22.2 ([1854211](https://github.com/kubeshop/monokle/commit/185421156321ab40879804b2fdcc6f2c13400bac))
+
 ## [1.10.0](https://github.com/kubeshop/monokle/compare/v1.9.2-nightly-2022-08-10.0...v1.10.0) (2022-08-10)
 
 

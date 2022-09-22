@@ -200,6 +200,8 @@ const SearchPane: React.FC<{height: number}> = ({height}) => {
 
   useEffect(() => {
     return () => {
+      setFindingMatches(false);
+      setCurrentMatch(null);
       dispatch(setActiveTab(null));
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -296,7 +298,8 @@ const SearchPane: React.FC<{height: number}> = ({height}) => {
                   </p>
                 </S.MatchText>
               )}
-              {recentSearch.length && !searchQuery && !isFindingMatches && (
+
+              {recentSearch.length && !searchQuery && !isFindingMatches ? (
                 <RecentSearch
                   recentSearch={recentSearch}
                   handleClick={query => {
@@ -304,7 +307,8 @@ const SearchPane: React.FC<{height: number}> = ({height}) => {
                     findMatches(query);
                   }}
                 />
-              )}
+              ) : null}
+
               {searchQuery && !searchTree.length && !isFindingMatches && 'No matches found'}
             </S.RootFolderText>
             {isFindingMatches && <S.Skeleton active />}
@@ -386,6 +390,7 @@ const SearchPane: React.FC<{height: number}> = ({height}) => {
               ) : (
                 'No matches found'
               )}
+
               {replaceQuery && (
                 <S.ButtonContainer>
                   <Button type="primary" onClick={replaceCurrentSelection} disabled={!currentMatchNode}>
@@ -397,6 +402,7 @@ const SearchPane: React.FC<{height: number}> = ({height}) => {
                 </S.ButtonContainer>
               )}
             </S.RootFolderText>
+
             {isFindingMatches && <S.Skeleton active />}
           </S.TreeContainer>
         </TabPane>

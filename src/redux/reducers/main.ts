@@ -24,6 +24,7 @@ import {
   SelectionHistoryEntry,
 } from '@models/appstate';
 import {CurrentMatch, FileEntry} from '@models/fileentry';
+import {GitChangedFile, GitRepo} from '@models/git';
 import {HelmChart} from '@models/helm';
 import {ImageType} from '@models/image';
 import {ValidationIntegration} from '@models/integrations';
@@ -31,6 +32,7 @@ import {K8sResource} from '@models/k8sresource';
 import {ThunkApi} from '@models/thunk';
 
 import {transferResource} from '@redux/compare';
+import {setChangedFiles, setCurrentBranch, setRepo} from '@redux/git';
 import {AppListenerFn} from '@redux/listeners/base';
 import {currentConfigSelector} from '@redux/selectors';
 import {HelmChartEventEmitter} from '@redux/services/helm';
@@ -55,7 +57,8 @@ import {updateMultipleResources} from '@redux/thunks/updateMultipleResources';
 import {updateResource} from '@redux/thunks/updateResource';
 
 import electronStore from '@utils/electronStore';
-import {makeResourceNameKindNamespaceIdentifier} from '@utils/resources';
+import {promiseFromIpcRenderer} from '@utils/promises';
+import {isResourcePassingFilter, makeResourceNameKindNamespaceIdentifier} from '@utils/resources';
 import {DIFF, trackEvent} from '@utils/telemetry';
 import {parseYamlDocument} from '@utils/yaml';
 
@@ -83,6 +86,8 @@ export type SetRootFolderPayload = {
   alert?: AlertType;
   isScanExcludesUpdated: 'outdated' | 'applied';
   isScanIncludesUpdated: 'outdated' | 'applied';
+  gitChangedFiles: GitChangedFile[];
+  gitRepo?: GitRepo;
 };
 
 export type UpdateMultipleResourcesPayload = {
@@ -330,6 +335,7 @@ export const multiplePathsRemoved = createAsyncThunk<AppState, string[], ThunkAp
   'main/multiplePathsRemoved',
   async (filePaths, thunkAPI) => {
     const state = thunkAPI.getState();
+    const projectRootFolder = state.config.selectedProjectRootFolder;
 
     const nextMainState = createNextState(state.main, mainState => {
       filePaths.forEach((filePath: string) => {
@@ -339,6 +345,22 @@ export const multiplePathsRemoved = createAsyncThunk<AppState, string[], ThunkAp
         }
       });
     });
+
+    const repo = await promiseFromIpcRenderer('git.fetchGitRepo', 'git.fetchGitRepo.result', projectRootFolder);
+
+    if (repo) {
+      thunkAPI.dispatch(setRepo(repo));
+      thunkAPI.dispatch(setCurrentBranch(repo.currentBranch));
+
+      const result = await promiseFromIpcRenderer('git.getChangedFiles', 'git.getChangedFiles.result', {
+        localPath: projectRootFolder,
+        fileMap: nextMainState.fileMap,
+      });
+
+      if (result) {
+        thunkAPI.dispatch(setChangedFiles(result));
+      }
+    }
 
     return nextMainState;
   }
@@ -426,6 +448,7 @@ export const mainSlice = createSlice({
       action: PayloadAction<{resourceId: string; isVirtualSelection?: boolean}>
     ) => {
       const resource = state.resourceMap[action.payload.resourceId];
+      state.lastChangedLine = 0;
       if (resource) {
         updateSelectionAndHighlights(state, resource);
         updateSelectionHistory('resource', Boolean(action.payload.isVirtualSelection), state);
@@ -757,6 +780,9 @@ export const mainSlice = createSlice({
     setImagesSearchedValue: (state: Draft<AppState>, action: PayloadAction<string>) => {
       state.imagesSearchedValue = action.payload;
     },
+    setLastChangedLine: (state: Draft<AppState>, action: PayloadAction<number>) => {
+      state.lastChangedLine = action.payload;
+    },
     setImagesList: (state: Draft<AppState>, action: PayloadAction<ImagesListType>) => {
       state.imagesList = action.payload;
     },
@@ -785,12 +811,14 @@ export const mainSlice = createSlice({
   },
   extraReducers: builder => {
     builder.addCase(setAlert, (state, action) => {
-      const notification: AlertType = action.payload;
+      const notification: AlertType = {
+        ...action.payload,
+        id: uuidv4(),
+        hasSeen: false,
+        createdAt: new Date().getTime(),
+      };
 
-      state.notifications = [
-        {...notification, id: uuidv4(), hasSeen: false, createdAt: new Date().getTime()},
-        ...state.notifications,
-      ];
+      state.notifications = [notification, ...state.notifications];
     });
 
     builder
@@ -1376,6 +1404,7 @@ export const {
   updateSearchHistory,
   updateSearchQuery,
   updateReplaceQuery,
+  setLastChangedLine,
 } = mainSlice.actions;
 export default mainSlice.reducer;
 
@@ -1385,13 +1414,22 @@ export default mainSlice.reducer;
 export const resourceMapChangedListener: AppListenerFn = listen => {
   listen({
     predicate: (action, currentState, previousState) => {
-      return !isEqual(currentState.main.resourceMap, previousState.main.resourceMap);
+      return (
+        !isEqual(currentState.main.resourceMap, previousState.main.resourceMap) ||
+        !isEqual(currentState.main.resourceFilter, previousState.main.resourceFilter)
+      );
     },
 
     effect: async (_action, {dispatch, getState}) => {
+      const resourceFilter = getState().main.resourceFilter;
       const resourceMap = getActiveResourceMap(getState().main);
+
+      const currentResourcesMap = Object.fromEntries(
+        Object.entries(resourceMap).filter(([, value]) => isResourcePassingFilter(value, resourceFilter))
+      );
+
       const imagesList = getState().main.imagesList;
-      const images = getImages(resourceMap);
+      const images = getImages(currentResourcesMap);
 
       if (!isEqual(images, imagesList)) {
         dispatch(setImagesList(images));
