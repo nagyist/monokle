@@ -25,9 +25,7 @@ import {getFileStats} from '@utils/files';
 import {promiseFromIpcRenderer} from '@utils/promises';
 import {OPEN_EXISTING_PROJECT, trackEvent} from '@utils/telemetry';
 
-import {fileService} from '@src/infrastructure/controllers/FileController';
-import {IFile} from '@src/monokle-core';
-import {IBaseResource} from '@src/monokle-core/core/interfaces/IBaseResource';
+import {FileController} from '@src/infrastructure/controllers/FileController';
 import {IFolder} from '@src/monokle-core/core/interfaces/IFolder';
 
 /**
@@ -45,8 +43,8 @@ export const setRootFolder = createAsyncThunk<
   const projectConfig = currentConfigSelector(thunkAPI.getState());
   const userDataDir = thunkAPI.getState().config.userDataDir;
   const resourceRefsProcessingOptions = thunkAPI.getState().main.resourceRefsProcessingOptions;
-  const resourceMap: ResourceMapType = {};
-  const fileMap: FileMapType = {};
+  let resourceMap: ResourceMapType = {};
+  let fileMap: FileMapType = {};
   const helmChartMap: HelmChartMapType = {};
   const helmValuesMap: HelmValuesMapType = {};
   const helmTemplatesMap: HelmTemplatesMapType = {};
@@ -70,9 +68,12 @@ export const setRootFolder = createAsyncThunk<
     return createRejectionWithAlert(thunkAPI, 'Invalid path', `Specified path ${rootFolder} is not a folder`);
   }
 
-  const mainFolder: IFolder = await fileService.getFolder(rootFolder);
-  const allFiles: IFile[] = await fileService.getAllFiles(mainFolder);
-  const allResources: IBaseResource[] = await fileService.getAllResources(mainFolder);
+  const fileController: FileController = new FileController();
+  const mainFolder: IFolder = await fileController.getFolder(rootFolder);
+  console.log('mainFolder', mainFolder);
+  fileMap = fileController.getFileMap(mainFolder, rootFolder) as any;
+  resourceMap = (await fileController.getResourceMap(mainFolder)) as ResourceMapType;
+  console.log(fileMap);
   // const rootEntry = createRootFileEntry(rootFolder, fileMap);
 
   // this Promise is needed for `setRootFolder.pending` action to be dispatched correctly
@@ -86,10 +87,6 @@ export const setRootFolder = createAsyncThunk<
   // const files = await readFilesPromise;
 
   // rootEntry.children = files;
-
-  allResources.forEach((r: IBaseResource) => {
-    resourceMap[r.id] = r as any;
-  });
 
   const policyPlugins = thunkAPI.getState().main.policies.plugins;
   processKustomizations(resourceMap, fileMap);
