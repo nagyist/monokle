@@ -26,7 +26,6 @@ export const createNode = (
   const isRoot = fileEntry.name === ROOT_FILE_ENTRY;
   const key = isRoot ? ROOT_FILE_ENTRY : fileEntry.filePath;
   const name = isRoot ? rootFolderName : fileEntry.name;
-  console.log('fileEntry', fileEntry);
   const fileExtension = fileEntry.extension ? fileEntry.extension.split('.').join('') : '';
   const isTextExtension = textExtensions.some(supportedExtension => supportedExtension === fileExtension);
 

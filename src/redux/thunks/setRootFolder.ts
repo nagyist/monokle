@@ -9,7 +9,6 @@ import {
   HelmValuesMapType,
   ResourceMapType,
 } from '@models/appstate';
-import {GitRepo} from '@models/git';
 import {RootState} from '@models/rootstate';
 
 import {SetRootFolderPayload} from '@redux/reducers/main';
@@ -22,7 +21,6 @@ import {processResources} from '@redux/services/resource';
 import {createRejectionWithAlert} from '@redux/thunks/utils';
 
 import {getFileStats} from '@utils/files';
-import {promiseFromIpcRenderer} from '@utils/promises';
 import {OPEN_EXISTING_PROJECT, trackEvent} from '@utils/telemetry';
 
 import {FileController} from '@src/infrastructure/controllers/FileController';
@@ -68,12 +66,14 @@ export const setRootFolder = createAsyncThunk<
     return createRejectionWithAlert(thunkAPI, 'Invalid path', `Specified path ${rootFolder} is not a folder`);
   }
 
+  rootFolder = '/argoproj/argo-rollouts';
+
   const fileController: FileController = new FileController();
   const mainFolder: IFolder = await fileController.getFolder(rootFolder);
   console.log('mainFolder', mainFolder);
   fileMap = fileController.getFileMap(mainFolder, rootFolder) as any;
+  console.log('fileMap', fileMap);
   resourceMap = (await fileController.getResourceMap(mainFolder)) as ResourceMapType;
-  console.log(fileMap);
   // const rootEntry = createRootFileEntry(rootFolder, fileMap);
 
   // this Promise is needed for `setRootFolder.pending` action to be dispatched correctly
@@ -109,21 +109,21 @@ export const setRootFolder = createAsyncThunk<
     numberOfResources: Object.values(resourceMap).length,
   });
 
-  const isFolderGitRepo = await promiseFromIpcRenderer<boolean>(
-    'git.isFolderGitRepo',
-    'git.isFolderGitRepo.result',
-    rootFolder
-  );
-  const gitRepo = isFolderGitRepo
-    ? await promiseFromIpcRenderer<GitRepo>('git.fetchGitRepo', 'git.fetchGitRepo.result', rootFolder)
-    : undefined;
+  // const isFolderGitRepo = await promiseFromIpcRenderer<boolean>(
+  //   'git.isFolderGitRepo',
+  //   'git.isFolderGitRepo.result',
+  //   rootFolder
+  // );
+  // const gitRepo = isFolderGitRepo
+  //   ? await promiseFromIpcRenderer<GitRepo>('git.fetchGitRepo', 'git.fetchGitRepo.result', rootFolder)
+  //   : undefined;
 
-  const gitChangedFiles = isFolderGitRepo
-    ? await promiseFromIpcRenderer('git.getChangedFiles', 'git.getChangedFiles.result', {
-        localPath: rootFolder,
-        fileMap,
-      })
-    : [];
+  // const gitChangedFiles = isFolderGitRepo
+  //   ? await promiseFromIpcRenderer('git.getChangedFiles', 'git.getChangedFiles.result', {
+  //       localPath: rootFolder,
+  //       fileMap,
+  //     })
+  //   : [];
 
   return {
     projectConfig,
@@ -135,7 +135,5 @@ export const setRootFolder = createAsyncThunk<
     isScanExcludesUpdated: 'applied',
     isScanIncludesUpdated: 'applied',
     alert: rootFolder ? generatedAlert : undefined,
-    gitChangedFiles,
-    gitRepo,
   };
 });

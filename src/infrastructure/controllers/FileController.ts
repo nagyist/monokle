@@ -1,15 +1,16 @@
-import {IFile, getFileService} from '@src/monokle-core';
+import {getFileService} from '@src/monokle-core';
 import {IBaseResource} from '@src/monokle-core/core/interfaces/IBaseResource';
 import {IFolder} from '@src/monokle-core/core/interfaces/IFolder';
 import {FileService} from '@src/monokle-core/services/FileService';
 
 import {FileTreeDTO} from '../dtos/FileTreeDto';
-import {LocalFileRepository} from '../repositories/LocalFileRepository';
+import {GithubRepo} from '../repositories/GithubRepo';
 
 export class FileController {
   private fileService: FileService;
   constructor() {
-    this.fileService = getFileService(new LocalFileRepository());
+    // this.fileService = getFileService(new LocalFileRepository());
+    this.fileService = getFileService(new GithubRepo());
   }
 
   public async getFolder(rootPath: string) {
@@ -62,6 +63,4 @@ export class FileController {
     });
     return resourceMap;
   }
-
-  private fileTreeMapper(files: IFile[], rootPath: string) {}
 }
